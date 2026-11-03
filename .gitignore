@@ -1,0 +1,27 @@
+# Dependencies and frontend build output
+node_modules/
+dist/
+release/
+
+# Tauri and Rust build output
+src-tauri/target/
+src-tauri/gen/
+
+# Local research checkout and assistant tooling
+research/
+.agents/
+
+# Environment and local machine files
+.env
+.env.*
+*.local
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor settings
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

@@ -1,0 +1,54 @@
+VOXI 0.1.1 — WINDOWS PREVIEW
+
+Requirements
+Windows 10 or 11, 64-bit Intel/AMD (x64), and internet for lyric lookups.
+Spotify desktop is the primary supported player. Edge YouTube Music can also
+work when the browser publishes Windows media information.
+
+Install
+1. Run Voxi_0.1.1_x64-setup.exe and follow the setup steps.
+2. Setup installs for your current Windows account. It includes a Microsoft
+   WebView2 helper, which downloads the runtime if needed. Allow internet
+   access for that download; no development tools are needed.
+3. Open Voxi from the Start menu. Play a song in Spotify desktop.
+
+First use
+Voxi automatically follows the player that starts playing. When several players
+are already playing, it retains the current player or prefers Spotify on a tie.
+Pausing keeps the current song visible. There is no demo. When no player is
+available, Voxi waits for music. Settings > Player offers Automatic detection
+and manual player choices. Use Refresh players if your player does not appear.
+For broader word-timed coverage, read the disclosure in Settings and enable
+Expanded word source (LiriQo) if you agree to send that song's title, artist and
+duration to the service. Then use Retry lyrics. It is optional and off initially.
+
+Fisheye Visual is the default. Display changes are remembered. Fullscreen shows
+only the lyrics with a soft glowing gradient. Press Escape to return.
+Calm reduces choreography; Reduce motion removes spatial motion.
+
+Lyrics and privacy
+Lyrics require internet and third-party service availability. Spotify showing
+lyrics does not guarantee those providers return the same lyrics to Voxi.
+Word timings animate individual words; line-only lyrics advance whole lines;
+text without timing is manually scrollable. You can import local LRC or TTML.
+LRCLIB receives track metadata. GitHub hosts the public word-lyric catalog.
+LiriQo receives track title, artist and duration only when its option is enabled.
+Voxi does not request a Spotify password or modify Spotify.
+
+Troubleshooting
+No player: open Spotify, start playback, then Settings > Refresh players.
+No lyrics: enable the optional source if desired, Retry lyrics, or import a file.
+Provider errors do not establish that a song has no lyrics anywhere.
+Playback controls depend on the selected player's Windows media support.
+If runtime setup fails, install WebView2 from Microsoft's official site:
+https://developer.microsoft.com/microsoft-edge/webview2/
+
+Build status
+This is an unsigned preview, not a certified public release. Windows may show
+an unknown-publisher or reputation warning. Do not disable Windows protection;
+verify that you received the expected file from someone you trust.
+SHA256SUMS.txt identifies the installer in this package; a checksum detects
+file differences but is not a publisher signature.
+Not yet verified on a clean second PC, ARM Windows or 32-bit Windows.
+
+Uninstall through Windows Settings > Apps > Installed apps > Voxi.

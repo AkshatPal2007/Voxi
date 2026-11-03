@@ -1,0 +1,15 @@
+[package]
+name = "voxi"
+version = "0.1.1"
+description = "A Windows music and lyrics companion"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Media_Control", "Foundation", "Foundation_Collections"] }
