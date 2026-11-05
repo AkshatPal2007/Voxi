@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { wordPose, phrasePlan, playbackCursor, stageWords } from './word-motion.ts';
+
+test('line fallback stays one unit and mixed records retain untimed lines', () => {
+  const units = stageWords([{text:'An entire original line',time:3},{text:'Two words',time:8,words:[{text:'Two',time:8,end:9},{text:'words',time:9,end:10}]}]);
+  assert.equal(units.length,3);
+  assert.equal(units[0].line,true);
+  assert.equal(units[0].text,'An entire original line');
+  assert.equal(units[0].end,undefined);
+  assert.equal(units[1].time,8);
+  assert.equal(units[1].line,undefined);
+});
 test('phrase staging is deterministic, centered at focus and bounded', () => {
   assert.deepEqual(phrasePlan('song',2),phrasePlan('song',2));
   assert.notDeepEqual(phrasePlan('song',2),phrasePlan('song',3));

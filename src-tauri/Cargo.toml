@@ -1,6 +1,6 @@
 [package]
 name = "voxi"
-version = "0.1.4"
+version = "0.1.5"
 description = "A Windows music and lyrics companion"
 license = "MIT"
 edition = "2021"
@@ -13,4 +13,5 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 
 [target.'cfg(windows)'.dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
 windows = { version = "0.61", features = ["Media_Control", "Foundation", "Foundation_Collections", "Storage_Streams", "Security_Cryptography"] }

@@ -6,6 +6,7 @@ import { findWordCatalog, parseTtml } from './word-catalog';
 import { findExpandedWords } from './expanded-source';
 import { choosePlayer, playerLabel } from './player-selection';
 import { createAlbumArt } from './album-art';
+import { createAdditionalLookup } from './additional-sources';
 import './style.css';
 import './motion.css';
 import './minimal.css';
@@ -46,6 +47,9 @@ root.innerHTML = `
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 $('stage').insertAdjacentHTML('afterbegin','<div class="album-ambient" aria-hidden="true"></div><div class="album-ambient" aria-hidden="true"></div>');
 document.querySelector('footer')!.insertAdjacentHTML('beforeend','<label class="pin"><input id="album-ambience" type="checkbox"> Album ambience <small>Experimental</small></label><label>Ambience strength <input id="ambience-strength" type="range" min="10" max="60" value="35" aria-label="Album ambience strength"><output id="ambience-value">35%</output></label>');
+document.querySelector('.lyric-tools')!.insertAdjacentHTML('beforeend','<label class="pin"><input id="additional-catalogs" type="checkbox"> Additional word catalogs</label><p class="provider-note">When existing sources return no word timing, additional catalogs send title, artist, album and duration to lrcmux, then Better Lyrics if needed. Community services; coverage varies.</p>');
+$<HTMLInputElement>('additional-catalogs').checked = localStorage.getItem('voxi-additional-catalogs') !== 'false';
+const additionalLookup = createAdditionalLookup((source,track) => invoke<{status:number;body:string}>('lyric_catalog',{source,title:track.title,artist:track.artist,album:track.album,duration:track.duration}));
 for (const element of document.querySelectorAll('footer,.lyric-tools,.provider-note')) $('connections').append(element);
 const motionMode = $<HTMLSelectElement>('motion-mode');
 motionMode.value = localStorage.getItem('voxi-motion-mode') === 'calm' ? 'calm' : 'adaptive';
@@ -65,6 +69,28 @@ function syncMotion() {
 }
 systemMotion.addEventListener('change', syncMotion);
 const lyricRows = new Map<number, HTMLDivElement>();
+// Measure only at line changes or resize, never on every animation frame.
+let lineLayoutDirty = true;
+const lineResize = new ResizeObserver(() => { lineLayoutDirty = true; });
+lineResize.observe($('lyric-stack'));
+document.fonts.ready.then(() => { lineLayoutDirty = true; });
+function layoutLineLyrics(index: number) {
+  const stack = $('lyric-stack');
+  const anchor = Math.max(0, index);
+  const gap = parseFloat(getComputedStyle(stack).rowGap) || 24;
+  const rows = [...lyricRows.entries()].sort(([a], [b]) => a - b);
+  const heights = new Map(rows.map(([key, row]) => [key, row.offsetHeight]));
+  const offsets = new Map<number, number>([[anchor, 0]]);
+  for (const direction of [-1, 1]) {
+    for (let key = anchor + direction; heights.has(key); key += direction) {
+      const previous = key - direction;
+      offsets.set(key, offsets.get(previous)! + direction *
+        ((heights.get(previous) ?? 0) / 2 + heights.get(key)! / 2 + gap));
+    }
+  }
+  for (const [key, row] of rows) row.style.setProperty('--line-y', `${offsets.get(key) ?? 0}px`);
+  lineLayoutDirty = false;
+}
 let renderedLyrics: Line[] | undefined;
 let sessions: Session[] = [];
 let playerMode = localStorage.getItem('voxi-player-mode') || 'auto';
@@ -137,7 +163,6 @@ async function loadLyrics(track: Session) {
     if (request !== lyricsRequest) return;
     const extras = [expanded.status === 'fulfilled' ? expanded.value : undefined, catalog.status === 'fulfilled' ? catalog.value : undefined].filter((item): item is LyricRecord => !!item);
     const wordRecord = extras.find(hasRealWords) ?? extras[0];
-    if (lookup.status === 'rejected' && !wordRecord) throw lookup.reason;
     const result = lookup.status === 'fulfilled' ? lookup.value : { record: undefined as LyricRecord | undefined, candidates: [] as LyricRecord[], searched: true };
     if (wordRecord && (!result.record || !hasRealWords(result.record) && (hasRealWords(wordRecord) || !recordLines(result.record).length))) { result.record = wordRecord; result.candidates.unshift(wordRecord); }
     if (request !== lyricsRequest) return;
@@ -147,9 +172,24 @@ async function loadLyrics(track: Session) {
     $('match-label').hidden = !lyricCandidates.length;
     if (result.record) { applyLyricRecord(result.record, false); picker.value = String(result.record.id); }
     else {
-      lyricState = lyricCandidates.length ? 'CHOOSE A RECORDING' : 'NO MATCHING LYRICS';
+      lyricState = lookup.status === 'rejected' ? 'LYRIC SOURCES UNAVAILABLE' : lyricCandidates.length ? 'CHOOSE A RECORDING' : 'NO MATCHING LYRICS';
       status(lyricCandidates.length ? 'Possible recordings found, but the duration differs. Choose one to try, or import an LRC file.' : 'No matching timed lyrics returned by the enabled sources. This does not establish that timings are unavailable elsewhere.');
     }
+    if (native && $<HTMLInputElement>('additional-catalogs').checked && (!result.record || !hasRealWords(result.record))) {
+      try {
+        const extra = await additionalLookup(track,signal);
+        if (request !== lyricsRequest) return;
+        if (extra) {
+          lyricCandidates.unshift(extra);
+          picker.add(new Option(`${extra.trackName} · ${extra.artistName} · ${extra.provider}`,String(extra.id)));
+          $('match-label').hidden = false;
+          applyLyricRecord(extra,false); picker.value=String(extra.id);
+        } else if (lookup.status === 'rejected' && !result.record) throw lookup.reason;
+      } catch(error) {
+        if (request !== lyricsRequest) return;
+        status(`${$('status').textContent} Additional catalogs unavailable: ${String(error)} Available lyrics remain visible.`);
+      }
+    } else if (lookup.status === 'rejected' && !result.record) throw lookup.reason;
     if (expanded.status === 'rejected' && !signal.aborted) status(`${$('status').textContent} Expanded source failed: ${String(expanded.reason)} Retry later; this is not a confirmed absence of word data.`);
   } catch (error) {
     if (request !== lyricsRequest) return;
@@ -232,6 +272,7 @@ function renderFrame(now: number) {
   const index = activeLine(lyrics, position);
   if (index !== lastLine) {
     lastLine = index;
+    lineLayoutDirty = true;
     const stack = $('lyric-stack');
     if (renderedLyrics !== lyrics) { stack.replaceChildren(); lyricRows.clear(); renderedLyrics = lyrics; }
     if (!lyrics.length) {
@@ -256,6 +297,7 @@ function renderFrame(now: number) {
       }
     }
   }
+  if (lineLayoutDirty && $('stage').dataset.timing === 'line') layoutLineLyrics(index);
   $('elapsed').textContent = clock(position); $('duration').textContent = clock(current.duration);
   $<HTMLProgressElement>('progress').value = current.duration ? position / current.duration : 0;
   requestAnimationFrame(renderFrame);
@@ -325,9 +367,13 @@ $('expanded-provider').addEventListener('change', () => {
   localStorage.setItem('voxi-expanded-provider', String($<HTMLInputElement>('expanded-provider').checked));
   if (selected) void loadLyrics({ ...current });
 });
+$('additional-catalogs').addEventListener('change', () => {
+  localStorage.setItem('voxi-additional-catalogs',String($<HTMLInputElement>('additional-catalogs').checked));
+  if (selected) void loadLyrics({...current});
+});
 $('lyric-matches').addEventListener('change', () => {
   const record = lyricCandidates.find(item => String(item.id) === $<HTMLSelectElement>('lyric-matches').value);
-  if (record) applyLyricRecord(record, true);
+  if (record) { lyricsRequest++; abortLyrics?.abort(); applyLyricRecord(record, true); }
 });
 $('lrc').addEventListener('change', async () => {
   const file = $<HTMLInputElement>('lrc').files?.[0]; if (!file) return;
@@ -345,7 +391,7 @@ syncMotion();
 const sceneSettings = new MutationObserver(syncMotion);
 sceneSettings.observe($('toggle'), { childList: true });
 $('accent').addEventListener('input', syncMotion);
-window.addEventListener('pagehide', () => { pageDisposed = true; albumArt.dispose(); lyricStage?.dispose(); sceneSettings.disconnect(); systemMotion.removeEventListener('change', syncMotion); }, { once: true });
+window.addEventListener('pagehide', () => { pageDisposed = true; lineResize.disconnect(); albumArt.dispose(); lyricStage?.dispose(); sceneSettings.disconnect(); systemMotion.removeEventListener('change', syncMotion); }, { once: true });
 // Schedule after completion so slow native calls cannot accumulate.
 async function schedulePoll() { await poll(); setTimeout(schedulePoll, 500); }
 setTimeout(schedulePoll, 1000);

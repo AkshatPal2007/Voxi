@@ -3,6 +3,53 @@
 use serde::Serialize;
 
 #[derive(Serialize)]
+struct CatalogResponse { status: u16, body: String }
+
+// Fixed destinations, no arbitrary URL, account cookies, redirects or credentials.
+#[tauri::command]
+async fn lyric_catalog(source: String, title: String, artist: String, album: String, duration: f64) -> Result<CatalogResponse, String> {
+    if title.is_empty() || artist.is_empty() || [&title,&artist,&album].iter().any(|text| text.len() > 1000)
+        || !duration.is_finite() || duration <= 0.0 || duration > 36000.0 { return Err("Invalid lyric query".into()); }
+    #[cfg(windows)]
+    {
+        use std::sync::{OnceLock, atomic::{AtomicUsize, Ordering}};
+        static ACTIVE: AtomicUsize = AtomicUsize::new(0);
+        struct Permit;
+        impl Drop for Permit { fn drop(&mut self) { ACTIVE.fetch_sub(1,Ordering::Relaxed); } }
+        if ACTIVE.fetch_add(1,Ordering::Relaxed) >= 2 {
+            ACTIVE.fetch_sub(1,Ordering::Relaxed);
+            return Err("Catalog requests busy".into());
+        }
+        let _permit = Permit;
+        static CLIENT: OnceLock<Result<reqwest::Client,String>> = OnceLock::new();
+        let client = CLIENT.get_or_init(|| reqwest::Client::builder()
+            .user_agent(concat!("Voxi/",env!("CARGO_PKG_VERSION")," (+https://github.com/AkshatPal2007/Voxi)"))
+            .timeout(std::time::Duration::from_secs(12)).connect_timeout(std::time::Duration::from_secs(4))
+            .redirect(reqwest::redirect::Policy::none()).https_only(true).build().map_err(|_| "Catalog client unavailable".into()))
+            .as_ref().map_err(Clone::clone)?;
+        let (base, query) = match source.as_str() {
+            "lrcmux" => ("https://api.lrcmux.dev/get",vec![("title",title),("artist",artist),("album",album),("duration",duration.round().to_string()),("format","json".into()),("level","word".into()),("strict","true".into())]),
+            "betterlyrics" => ("https://api.betterlyrics.org/getLyrics",vec![("s",title),("a",artist),("al",album),("d",duration.round().to_string())]),
+            _ => return Err("Unknown lyric catalog".into()),
+        };
+        let mut url = reqwest::Url::parse(base).map_err(|_| "Invalid catalog destination")?;
+        url.query_pairs_mut().extend_pairs(query);
+        let mut response = client.get(url).send().await.map_err(|_| "Catalog request failed or timed out")?;
+        let status = response.status().as_u16();
+        if status != 200 { return Ok(CatalogResponse {status,body:String::new()}); }
+        if response.content_length().unwrap_or(0) > 2_000_000 { return Err("Catalog response too large".into()); }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(|_| "Catalog response interrupted")? {
+            if bytes.len()+chunk.len() > 2_000_000 { return Err("Catalog response too large".into()); }
+            bytes.extend_from_slice(&chunk);
+        }
+        Ok(CatalogResponse {status,body:String::from_utf8(bytes).map_err(|_| "Invalid catalog text")?})
+    }
+    #[cfg(not(windows))]
+    { let _ = (source,title,artist,album,duration); Err("Windows only".into()) }
+}
+
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct MediaSession {
     id: String,
@@ -133,7 +180,7 @@ fn main() {
         return;
     }
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![media_sessions, media_artwork, media_control])
+        .invoke_handler(tauri::generate_handler![media_sessions, media_artwork, media_control, lyric_catalog])
         .run(tauri::generate_context!())
         .expect("Could not start Voxi");
 }

@@ -20,7 +20,7 @@ Alternatively, build locally using the README instructions.
 7. Announce only features and platforms actually verified. Keep the preview's
    unsigned status and known limitations visible in the release notes.
 
-Current 0.1.4 limitations: unsigned installer; no clean second-PC installation
+Current 0.1.5 limitations: unsigned installer; no clean second-PC installation
 test yet; external lyric providers have variable coverage and availability.
 Word timing is not available for every song. Album ambience is experimental.
 

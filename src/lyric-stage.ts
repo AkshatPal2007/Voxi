@@ -32,12 +32,14 @@ export function createLyricStage(host: HTMLElement) {
   canvas.style.visibility = 'hidden';
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   let source: Line[] | undefined, units: StagedWord[] = [], cursor = -1, last = -1, signature = '', visible = true, lost = false;
+  const lineLabels = new Map<string,string[]>();
   const resize = new ResizeObserver(() => {
     const box = canvas.getBoundingClientRect();
     if (!box.width || !box.height) return;
     renderer.setSize(box.width, box.height, false);
     const height = Math.max(240, Math.min(1600, Math.round(1200 * box.height / box.width)));
     if (surface.height !== height) {
+      lineLabels.clear();
       texture.dispose(); surface.height = height; texture.needsUpdate = true;
     }
     last = -1;
@@ -48,6 +50,7 @@ export function createLyricStage(host: HTMLElement) {
   const onRestored = () => { lost = false; signature = ''; last = -1; };
   canvas.addEventListener('webglcontextlost', onLost); canvas.addEventListener('webglcontextrestored', onRestored);
   function clear() {
+    lineLabels.clear();
     source = undefined; units = []; cursor = -1; signature = ''; last = -1;
     canvas.style.visibility = 'hidden';
     host.classList.remove('gpu-lyrics');
@@ -90,11 +93,11 @@ export function createLyricStage(host: HTMLElement) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       for (let i = Math.max(0, target - 2); i <= Math.min(units.length - 1, target + 2); i++) {
         const word = units[i], distance = i - cursor;
-        const y = height * .52 + distance * height * .23;
-        const isWord = word.text.trim().split(/\s+/).length <= 3;
+        const y = height * .52 + distance * height * (word.line ? .30 : .23);
+        const isWord = !word.line && word.text.trim().split(/\s+/).length <= 3;
         const active = i === target && position >= word.time && (word.end === undefined || position < word.end);
         const emphasis = wordEmphasis(word,position,reduced,units[i+1]?.time);
-        const size = (isWord ? height * .17 : height * .115) * emphasis;
+        const size = (isWord ? height * .17 : height * .105) * emphasis;
         ctx.font = `italic 750 ${size}px "Segoe UI Variable", "Segoe UI", sans-serif`;
         const text = word.text.trim();
         const icon = style === 'visual' || style === 'lens-visual' ? symbols[text.toLowerCase().replace(/[^a-z]/g, '')] ?? '' : '';
@@ -104,7 +107,21 @@ export function createLyricStage(host: HTMLElement) {
         pose.x = previous.x + (pose.x-previous.x)*blend;
         pose.rotation = previous.rotation + (pose.rotation-previous.rotation)*blend;
         pose.depth = previous.depth + (pose.depth-previous.depth)*blend;
-        const scale = Math.min(1, (1020 - Math.abs(pose.x) * 2) / Math.max(1, ctx.measureText(label).width));
+        // Long lines wrap to two balanced rows, retaining a readable type size.
+        let labels = lineLabels.get(label) ?? [label];
+        ctx.font = `italic 750 ${word.line ? height*.105*1.3 : size}px "Segoe UI Variable", "Segoe UI", sans-serif`;
+        if (word.line && !lineLabels.has(label) && ctx.measureText(label).width > 1000) {
+          const parts = label.split(/\s+/);
+          let best = Infinity;
+          for (let split = 1; split < parts.length; split++) {
+            const candidate = [parts.slice(0,split).join(' '),parts.slice(split).join(' ')];
+            const width = Math.max(...candidate.map(text => ctx.measureText(text).width));
+            if (width < best) { best = width; labels = candidate; }
+          }
+        }
+        if (word.line) lineLabels.set(label,labels);
+        ctx.font = `italic 750 ${size}px "Segoe UI Variable", "Segoe UI", sans-serif`;
+        const scale = Math.min(1, (1020 - Math.abs(pose.x) * 2) / Math.max(1, ...labels.map(text => ctx.measureText(text).width)));
         ctx.save(); ctx.translate(600 + pose.x, y); ctx.rotate(pose.rotation); ctx.scale(scale * pose.depth, scale * pose.depth);
         ctx.globalAlpha = Math.max(0, 1 - Math.abs(distance) * .24);
         ctx.fillStyle = accent;
@@ -124,7 +141,7 @@ export function createLyricStage(host: HTMLElement) {
           highlight.addColorStop(0,accent); highlight.addColorStop(.5,'#f4fbff'); highlight.addColorStop(1,accent);
           ctx.fillStyle = highlight; ctx.shadowColor = accent; ctx.shadowBlur = reduced ? 0 : immersive ? 18 : 9;
         }
-        ctx.fillText(label, 0, 0); ctx.restore();
+        labels.forEach((text,row) => ctx.fillText(text, 0, (row-(labels.length-1)/2)*size*1.16)); ctx.restore();
       }
       texture.needsUpdate = true; renderer.render(scene, camera);
     },

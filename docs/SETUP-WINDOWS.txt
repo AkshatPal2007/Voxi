@@ -1,4 +1,4 @@
-VOXI 0.1.4 — WINDOWS PREVIEW
+VOXI 0.1.5 — WINDOWS PREVIEW
 
 Requirements
 Windows 10 or 11, 64-bit Intel/AMD (x64), and internet for lyric lookups.
@@ -6,7 +6,7 @@ Spotify desktop is the primary supported player. Edge YouTube Music can also
 work when the browser publishes Windows media information.
 
 Install
-1. Run Voxi_0.1.4_x64-setup.exe and follow the setup steps.
+1. Run Voxi_0.1.5_x64-setup.exe and follow the setup steps.
 2. Setup installs for your current Windows account. It includes a Microsoft
    WebView2 helper, which downloads the runtime if needed. Allow internet
    access for that download; no development tools are needed.
@@ -37,11 +37,19 @@ Lyrics and privacy
 Lyrics require internet and third-party service availability. Spotify showing
 lyrics does not guarantee those providers return the same lyrics to Voxi.
 Word timings animate individual words; line-only lyrics advance whole lines;
-text without timing is manually scrollable. You can import local LRC or TTML.
+both use the curved lyric animation, without a sliding highlight for lines.
+Text without timing is manually scrollable. You can import local LRC or TTML.
 LRCLIB receives track metadata. GitHub hosts the public word-lyric catalog.
 LiriQo receives track title, artist and duration when its option is enabled
 (the default). Turning it off stops subsequent lookups to that service.
 Voxi does not request a Spotify password or modify Spotify.
+Additional word catalogs are ON by default, with a separate Settings switch.
+When existing sources have no word data, title, artist, album and duration go
+to lrcmux, then Better Lyrics if needed. Native requests use an app identifier,
+12-second timeout, bounded responses, no redirects and no account cookies.
+Some provider requests may be restricted or unavailable. Available line
+lyrics remain visible while extra lookups run. No near-universal word-timing
+coverage is promised.
 
 Troubleshooting
 No player: open Spotify, start playback, then Settings > Refresh players.

@@ -16,9 +16,9 @@ Voxi follows your music player and turns available lyric timestamps into animate
 
 ## Install
 
-**Current preview: 0.1.4 · Windows 10/11 x64 · unsigned.** Use the maintainer's download link shared with the launch announcement, or check [GitHub Releases](https://github.com/AkshatPal2007/Voxi/releases) for published packages. CI artifacts are test builds, not automatically published releases.
+**Current preview: 0.1.5 · Windows 10/11 x64 · unsigned.** Use the maintainer's download link shared with the launch announcement, or check [GitHub Releases](https://github.com/AkshatPal2007/Voxi/releases) for published packages. CI artifacts are test builds, not automatically published releases.
 
-Extract `Voxi_0.1.4_x64-share.zip` and run `Voxi_0.1.4_x64-setup.exe`. Open Voxi from the Start menu and play music. Setup includes a WebView2 bootstrapper; internet may be required to install the runtime and retrieve lyrics. Recipients do not need development tools. Keep the included license, notices and setup guide with the installer.
+Extract `Voxi_0.1.5_x64-share.zip` and run `Voxi_0.1.5_x64-setup.exe`. Open Voxi from the Start menu and play music. Setup includes a WebView2 bootstrapper; internet may be required to install the runtime and retrieve lyrics. Recipients do not need development tools. Keep the included license, notices and setup guide with the installer.
 
 Artwork beside the title comes from the selected Windows player. Settings includes **Album ambience · Experimental** (off by default) and a strength control. It samples each cover locally once, crossfades soft background colors, and keeps lyrics readable. Missing artwork uses the Voxi wave and your normal accent. Fullscreen hides the cover and retains ambient lighting.
 
@@ -51,7 +51,9 @@ Share the release ZIP, not the workspace or build caches. Keep dependency notice
 
 Voxi reads track metadata and playback state from Windows media sessions. LRCLIB receives metadata for lyric lookup. A public GitHub catalog provides additional timed lyrics. LiriQo expanded lookup is on by default and sends title, artist and duration; turn it off in Settings at any time. Saved OFF preferences are preserved. Coverage varies by provider and recording. Preferences are stored locally; no Spotify password is required.
 
-Word timestamps animate individual words; line timestamps advance whole lines. Untimed text is manually scrollable. Local LRC and TTML imports are supported.
+Word timestamps animate individual words. When only line timestamps exist, whole lines use the same curved, depth-based animation, with no progress wipe or invented word timing. Untimed text is manually scrollable. Local LRC and TTML imports are supported.
+
+**Additional word catalogs** is on by default and can be disabled independently in Settings. Only when existing sources return no word timing, the desktop app sends title, artist, album and duration to lrcmux, then Better Lyrics if necessary. These requests use a fixed native client with a 12-second timeout, bounded responses, no account cookies and no redirects. lrcmux returns recording metadata for validation; Better Lyrics does not echo identity, so its matching relies on the submitted metadata, optional confidence and timing bounds. Availability and catalog coverage vary; some Better Lyrics cache misses require provider-authorized API access. Voxi does not supply or bypass that access. See [source research](docs/LYRIC-SOURCES.md).
 
 ## Development
 

@@ -1,21 +1,31 @@
 import { parseTtml } from './word-catalog.ts';
 import { safeAutomaticMatch, type LyricRecord, type TrackIdentity } from './lyric-source.ts';
+import { nativeWordLines } from './native-words.ts';
 
-/** Only raw source TTML is accepted: do not trust a generated karaoke label. */
+/** Inspect every candidate; require actual TTML or explicitly native word windows. */
 export function parseExpandedResult(data: any, track: TrackIdentity): LyricRecord | undefined {
   const root = data?.data ?? data;
   const metadata = root?.metadata;
-  const primary = root?.primary;
-  if (!metadata || !primary || !['word', 'syllable'].includes(primary.syncLevel) || typeof primary.ttml !== 'string' || primary.nativeWordTiming === false) return;
+  if (!metadata) return;
   const record: LyricRecord = {
     id: -1000001, trackName: metadata.title, artistName: metadata.artist,
     albumName: metadata.album ?? '', duration: Number(metadata.duration),
-    syncedLyrics: null, instrumental: false, provider: `LiriQo · ${primary.upstreamProvider ?? primary.provider}`,
+    syncedLyrics: null, instrumental: false,
   };
   if (typeof record.trackName !== 'string' || typeof record.artistName !== 'string' || !Number.isFinite(record.duration) || !safeAutomaticMatch(track, record)) return;
-  const { lines } = parseTtml(primary.ttml);
-  if (!lines.length || !lines.some(line => line.words?.length) || lines.some(line => (line.end ?? 0) > record.duration + 2)) return;
-  return { ...record, wordLines: lines, hasWordSync: true };
+  for (const candidate of [root.primary,...(Array.isArray(root.tracks) ? root.tracks : [])]) {
+    if (!candidate || !['word','syllable'].includes(candidate.syncLevel) || candidate.nativeWordTiming === false) continue;
+    let lines;
+    if (typeof candidate.ttml === 'string') {
+      try { lines = parseTtml(candidate.ttml).lines; } catch { /* Try native normalized windows. */ }
+    }
+    if (!lines?.some(line => line.words?.length) && (candidate.nativeWordTiming === true || candidate.nativeRichsync === true)) {
+      const timed = Array.isArray(candidate.timed) ? candidate.timed.map((line:any) => ({...line,words:line.words ?? candidate.words?.[line.id]})) : [];
+      lines = nativeWordLines(timed,record.duration);
+    }
+    if (!lines?.some(line => line.words?.length) || lines.some(line => (line.end ?? 0) > record.duration + 2)) continue;
+    return {...record,wordLines:lines,hasWordSync:true,provider:`LiriQo · ${candidate.upstreamProvider ?? candidate.provider}`};
+  }
 }
 
 export async function findExpandedWords(track: TrackIdentity, signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<LyricRecord | undefined> {

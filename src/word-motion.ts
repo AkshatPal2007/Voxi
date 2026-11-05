@@ -1,6 +1,6 @@
 import type { Line, Word } from './lyrics.ts';
 
-export type StagedWord = Word & { phrase: number; featured: boolean };
+export type StagedWord = Word & { phrase: number; featured: boolean; line?: boolean };
 export function phrasePlan(seed: string, phrase: number) {
   let hash = 2166136261;
   for (const char of `${seed}:${phrase}`) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619); }
@@ -13,6 +13,8 @@ export function phrasePlan(seed: string, phrase: number) {
 export function stageWords(lines: Line[]): StagedWord[] {
   return lines.flatMap((line, phrase) => {
     const words = line.words ?? [];
+    // A line remains one timed unit. Never manufacture word timestamps.
+    if (!words.length) return [{ text: line.text, time: line.time, end: line.end, phrase, featured: false, line: true }];
     // One accent at most every three phrases, and only on an actual held word.
     let feature = -1, longest = .85;
     if (phrase % 3 === 1) words.forEach((word, i) => {

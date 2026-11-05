@@ -17,6 +17,16 @@ test('expanded provider preserves source TTML word times', () => {
   assert.equal(record?.wordLines?.[0].words?.[1].time, 3);
   assert.equal(record?.hasWordSync, true);
 });
+
+test('native normalized candidates are accepted beyond a line-only primary', () => {
+  const native = {provider:'netease',syncLevel:'word',nativeWordTiming:true,timed:[{id:0,text:'Stay here',start:2000,end:4000,words:[{text:'Stay ',start:2000,end:2800},{text:'here',start:3200,end:4000}]}]};
+  const data = {metadata:fixture.metadata,primary:{syncLevel:'line'},tracks:[native]};
+  assert.equal(parseExpandedResult(data,track)?.wordLines?.[0].words?.[1].time,3.2);
+  assert.equal(parseExpandedResult(data,track)?.provider,'LiriQo · netease');
+  assert.equal(parseExpandedResult({...data,tracks:[{...native,nativeWordTiming:false}]},track),undefined);
+  assert.equal(parseExpandedResult({...data,tracks:[{...native,nativeWordTiming:undefined}]},track),undefined);
+  assert.equal(parseExpandedResult({...data,tracks:[{...native,timed:[{...native.timed[0],words:[{text:'wrong text',start:2000,end:4000}]}]}]},track),undefined);
+});
 test('expanded provider rejects line-only, estimated, wrong recording and label-only karaoke', () => {
   assert.equal(parseExpandedResult({...fixture,primary:{...fixture.primary,syncLevel:'line'}},track),undefined);
   assert.equal(parseExpandedResult({...fixture,primary:{...fixture.primary,nativeWordTiming:false}},track),undefined);
