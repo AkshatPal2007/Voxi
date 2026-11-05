@@ -1,4 +1,4 @@
-VOXI 0.1.1 — WINDOWS PREVIEW
+VOXI 0.1.4 — WINDOWS PREVIEW
 
 Requirements
 Windows 10 or 11, 64-bit Intel/AMD (x64), and internet for lyric lookups.
@@ -6,7 +6,7 @@ Spotify desktop is the primary supported player. Edge YouTube Music can also
 work when the browser publishes Windows media information.
 
 Install
-1. Run Voxi_0.1.1_x64-setup.exe and follow the setup steps.
+1. Run Voxi_0.1.4_x64-setup.exe and follow the setup steps.
 2. Setup installs for your current Windows account. It includes a Microsoft
    WebView2 helper, which downloads the runtime if needed. Allow internet
    access for that download; no development tools are needed.
@@ -18,13 +18,20 @@ are already playing, it retains the current player or prefers Spotify on a tie.
 Pausing keeps the current song visible. There is no demo. When no player is
 available, Voxi waits for music. Settings > Player offers Automatic detection
 and manual player choices. Use Refresh players if your player does not appear.
-For broader word-timed coverage, read the disclosure in Settings and enable
-Expanded word source (LiriQo) if you agree to send that song's title, artist and
-duration to the service. Then use Retry lyrics. It is optional and off initially.
+Expanded word source (LiriQo) is on by default for broader lyric coverage.
+It sends the selected song's title, artist and duration to LiriQo. You can turn
+it off in Settings; a previously saved OFF preference is preserved.
 
 Fisheye Visual is the default. Display changes are remembered. Fullscreen shows
 only the lyrics with a soft glowing gradient. Press Escape to return.
 Calm reduces choreography; Reduce motion removes spatial motion.
+
+Album artwork appears beside the title when provided by the player. In Settings,
+enable Album ambience (Experimental) to tint the room using the cover's colors.
+Adjust Ambience strength to taste. It starts OFF; your choices are remembered.
+Artwork and its colors are processed locally, with no new artwork service.
+Missing artwork uses the Voxi wave and normal accent. Reduced motion disables
+the palette crossfade. Fullscreen hides the player and cover but keeps ambience.
 
 Lyrics and privacy
 Lyrics require internet and third-party service availability. Spotify showing
@@ -32,7 +39,8 @@ lyrics does not guarantee those providers return the same lyrics to Voxi.
 Word timings animate individual words; line-only lyrics advance whole lines;
 text without timing is manually scrollable. You can import local LRC or TTML.
 LRCLIB receives track metadata. GitHub hosts the public word-lyric catalog.
-LiriQo receives track title, artist and duration only when its option is enabled.
+LiriQo receives track title, artist and duration when its option is enabled
+(the default). Turning it off stops subsequent lookups to that service.
 Voxi does not request a Spotify password or modify Spotify.
 
 Troubleshooting

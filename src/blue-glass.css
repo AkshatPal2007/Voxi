@@ -30,6 +30,17 @@ h1::after { content:''; position:absolute; width:44px; height:2px; bottom:0; lef
 .online-dot { width:6px; height:6px; box-shadow:0 0 9px #8cd0ff66; }
 .player { margin-top:22px; padding:19px 24px; gap:22px; min-height:78px; border:1px solid #86c6ff16; border-radius:18px; background:linear-gradient(120deg,#12213390,#070e16); box-shadow:inset 0 1px 0 #b7ddff06; }
 .track { width:32%; }
+.player .track { flex:1; width:auto; }
+.album-cover { width:56px; height:56px; flex:0 0 56px; position:relative; border-radius:11px; overflow:hidden; background:linear-gradient(145deg,#18374c,#08121d); border:1px solid #aacfff22; display:grid; place-items:center; }
+.album-cover svg { width:33px; fill:none; stroke:#a5cee8; stroke-width:3; stroke-linecap:round; }
+.album-cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.album-cover img[hidden],.album-cover.has-art svg { display:none; }
+.album-ambient { position:absolute; inset:0; pointer-events:none; z-index:0; opacity:0; transition:opacity 1.5s ease; }
+.connections footer small { font-size:9px; padding:3px 6px; border:1px solid #9dd4ff35; border-radius:5px; color:#96c6e5; }
+#ambience-strength { width:110px; accent-color:var(--accent); }
+#ambience-value { min-width:32px; font-size:11px; }
+.side-light i { border-right-color:rgba(var(--album-primary,165,223,255),.5); }
+.side-light b { background:rgb(var(--album-primary,217,242,255)); }
 .track strong { font-size:15px; }
 .track>span { color:#9aaec0; }
 .transport button { color:#dae9f6; }
@@ -46,7 +57,7 @@ select { border-radius:20px; background:#0a1623; padding:9px 14px; border-color:
 .connections { padding-top:6px; }
 .connections footer select { max-width:240px; }
 #status { color:#8ea3b8; }
-/* Fullscreen is deliberately lyrics only. Escape is the exit affordance. */
+/* Fullscreen keeps lyrics and ambient edge lighting. Escape exits. */
 .immersive { overflow:hidden; cursor:none; background:#02070c; }
 .immersive aside,.immersive header,.immersive .stage-top,.immersive .stage-noise,
 .immersive .light-ribbons,.immersive .player,.immersive .display-controls,
@@ -54,5 +65,22 @@ select { border-radius:20px; background:#0a1623; padding:9px 14px; border-color:
 .immersive main { padding:0; max-width:none; }
 .immersive .stage { height:100dvh; min-height:0; width:100%; padding:0; border:0; border-radius:0; background:radial-gradient(ellipse at 50% 54%,#153d643d,transparent 58%),radial-gradient(ellipse at 10% 100%,#103b6830,transparent 48%),radial-gradient(ellipse at 95% 0%,#15365b35,transparent 45%),#02070c; }
 .immersive .lyric-canvas { inset:6% 8%; width:84%; height:88%; }
+.side-lights { position:absolute; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.side-light { position:absolute; top:8%; bottom:8%; width:19%; max-width:280px; opacity:.65; }
+.side-light-left { left:-7%; }
+.side-light-right { right:-7%; transform:rotate(180deg); }
+.side-light i { position:absolute; inset:0; border-radius:50%; border-right:1px solid #a5dfff80; background:radial-gradient(ellipse at 95% 50%,#318bff18,transparent 68%); box-shadow:8px 0 24px -15px #8cd5ff; animation:edge-sway 13s ease-in-out infinite alternate; }
+.side-light i:nth-child(2) { inset:14% -10% 4% 30%; opacity:.4; animation-duration:19s; animation-delay:-7s; }
+.side-light b { position:absolute; right:4%; top:50%; width:4px; height:4px; border-radius:50%; background:#d9f2ff; box-shadow:0 0 12px 3px #75bfff66; animation:edge-drift 17s ease-in-out infinite alternate; }
+.side-light-right i { animation-delay:-5s; }
+.side-light-right b { animation-delay:-9s; }
+.stage:not([data-playing=true]) .side-light * { animation-play-state:paused; }
+.reduce-motion .side-lights { display:none; }
+@keyframes edge-sway { from { transform:translateY(-4%) rotate(-9deg) scaleX(.88); opacity:.4; } to { transform:translateY(5%) rotate(9deg) scaleX(1.08); opacity:.85; } }
+@keyframes edge-drift { from { transform:translate(-10px,-110px); opacity:.2; } to { transform:translate(10px,120px); opacity:.8; } }
+@media(prefers-reduced-motion:reduce){.side-lights{display:none}}
+@media(max-width:800px){.side-light{opacity:.35;width:15%}}
 @media(max-width:1100px){#app{grid-template-columns:170px minmax(0,1fr)}main{padding:26px 24px 16px}.styles button{padding:11px 12px}.display-controls{gap:16px}.player{padding:17px 18px}.transport{gap:13px}}
 @media(max-width:800px){#app{display:block}aside{padding:14px 18px}.brand{font-size:25px}.brand-wave{width:34px}.nav{padding:9px 12px;font-size:12px}main{padding:20px 16px}h1{font-size:26px}.stage{height:53vh;min-height:330px}.stage-top{font-size:8px;letter-spacing:.7px}.player{gap:12px}.track{flex:1}.timeline{display:none}.styles button{padding:10px 12px}.display-controls{padding-top:20px;gap:14px}}
+.side-light i { border-right-color:rgba(var(--album-primary,165,223,255),.5); }
+.side-light b { background:rgb(var(--album-primary,217,242,255)); }

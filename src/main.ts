@@ -5,6 +5,7 @@ import { resolveLyrics, recordLines, hasRealWords, type LyricRecord } from './ly
 import { findWordCatalog, parseTtml } from './word-catalog';
 import { findExpandedWords } from './expanded-source';
 import { choosePlayer, playerLabel } from './player-selection';
+import { createAlbumArt } from './album-art';
 import './style.css';
 import './motion.css';
 import './minimal.css';
@@ -26,27 +27,30 @@ root.innerHTML = `
     <section id="connections" hidden class="connections"><h2>Your music, your space.</h2><p>Automatic detection follows the player that starts playing. Choose a player below to keep a specific connection.</p><p id="bridge-status"></p><button id="refresh" class="outline">Refresh players</button></section>
     <section id="room">
       <div class="stage" id="stage"><div class="stage-noise"></div>
+        <div class="side-lights" aria-hidden="true"><div class="side-light side-light-left"><i></i><i></i><b></b></div><div class="side-light side-light-right"><i></i><i></i><b></b></div></div>
         <svg class="light-ribbons" viewBox="0 0 1200 600" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ribbon-fill" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#327cdd" stop-opacity="0"/><stop offset=".52" stop-color="#3d8ff4" stop-opacity=".17"/><stop offset="1" stop-color="#8fd6ff" stop-opacity="0"/></linearGradient><linearGradient id="ribbon-edge"><stop stop-color="#357cf4" stop-opacity="0"/><stop offset=".48" stop-color="#b2e6ff"/><stop offset=".62" stop-color="#4da3ff" stop-opacity=".5"/><stop offset="1" stop-color="#246ac8" stop-opacity="0"/></linearGradient><filter id="ribbon-glow" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="9"/></filter></defs><path fill="url(#ribbon-fill)" d="M-80 270C230 310 290 30 650-50L300-80C270 160 150 230-80 270ZM480 660C770 590 860 455 1260 340L1260 660Z"/><g fill="none" stroke="url(#ribbon-edge)"><path class="ribbon-halo" d="M-80 270C230 310 290 30 650-50M480 660C770 590 860 455 1260 340M180 485C530 335 710 540 1130 470"/><path d="M-80 270C230 310 290 30 650-50M480 660C770 590 860 455 1260 340M180 485C530 335 710 540 1130 470"/></g></svg>
         <div class="stage-top"><span class="pill"><span class="online-dot"></span> <span id="source-label">AUTO DETECT</span></span><div class="stage-indicators"><span id="sync-label">WAITING FOR MUSIC</span><button id="exit-fullscreen" class="outline">Exit fullscreen</button></div></div>
         <div id="lyric-stack" class="lyric-stack" aria-live="off"></div>
         <div id="plain-lyrics" class="plain-lyrics" tabindex="0" aria-label="Lyrics without timestamps, scroll to read"></div>
         <div class="word-unavailable" role="status">No word timings returned by the enabled sources.<small>Enable the expanded source below, retry, or import timed lyrics.</small></div>
       </div>
-      <div class="player"><div class="cover">v<span>♪</span></div><div class="track"><strong id="track-title"></strong><span id="track-artist"></span></div><div class="transport"><button id="previous" aria-label="Previous track">⏮</button><button class="play" id="toggle" aria-label="Play or pause">▶</button><button id="next" aria-label="Next track">⏭</button></div><div class="timeline"><span id="elapsed">0:00</span><progress id="progress" value="0" max="1" aria-label="Track progress"></progress><span id="duration">0:00</span></div></div>
+      <div class="player"><div class="album-cover" id="album-cover"><svg aria-hidden="true" viewBox="0 0 64 32"><path d="M3 23C13 23 14 7 23 7S36 26 44 26 53 10 61 9"/></svg><img hidden alt="Current track artwork" decoding="async"></div><div class="track"><strong id="track-title"></strong><span id="track-artist"></span></div><div class="transport"><button id="previous" aria-label="Previous track">⏮</button><button class="play" id="toggle" aria-label="Play or pause">▶</button><button id="next" aria-label="Next track">⏭</button></div><div class="timeline"><span id="elapsed">0:00</span><progress id="progress" value="0" max="1" aria-label="Track progress"></progress><span id="duration">0:00</span></div></div>
       <div class="display-controls"><span>Display</span><div class="styles" role="group" aria-label="Display style"><button data-style="ship" class="selected">Ship</button><button data-style="lens">Fisheye</button><button data-style="lens-visual">Fisheye Visual</button><button data-style="visual">Visual</button></div><label>Motion <select id="motion-mode"><option value="adaptive">Adaptive</option><option value="calm">Calm</option></select></label></div>
     </section>
     <footer><label>Player <select id="sources" aria-label="Music source"><option value="auto">Automatic detection</option></select></label><label>Accent <input id="accent" type="color" value="#a5cee8" aria-label="Accent color"></label><label class="pin"><input id="pin" type="checkbox"> Always on top</label><label class="pin"><input id="motion" type="checkbox"> Reduce motion</label><label class="import">Import lyrics<input id="lrc" type="file" accept=".lrc,.txt,.yaml,.yml,.ttml"></label></footer>
     <div class="lyric-tools"><button id="retry-lyrics" class="outline">Retry lyrics</button><label id="match-label" hidden>Recording <select id="lyric-matches" aria-label="Choose lyric recording"></select></label><label><input id="expanded-provider" type="checkbox"> Expanded word source (LiriQo)</label></div>
-    <p class="provider-note">Optional: sends the selected song’s title, artist and duration to LiriQo to search additional sources. Community service; availability can vary.</p>
+    <p class="provider-note">Expanded search is on by default and sends the selected song’s title, artist and duration to LiriQo to search additional sources. Turn it off above at any time. Community service; availability can vary.</p>
     <p id="status" role="status"></p>
   </main>`;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+$('stage').insertAdjacentHTML('afterbegin','<div class="album-ambient" aria-hidden="true"></div><div class="album-ambient" aria-hidden="true"></div>');
+document.querySelector('footer')!.insertAdjacentHTML('beforeend','<label class="pin"><input id="album-ambience" type="checkbox"> Album ambience <small>Experimental</small></label><label>Ambience strength <input id="ambience-strength" type="range" min="10" max="60" value="35" aria-label="Album ambience strength"><output id="ambience-value">35%</output></label>');
 for (const element of document.querySelectorAll('footer,.lyric-tools,.provider-note')) $('connections').append(element);
 const motionMode = $<HTMLSelectElement>('motion-mode');
 motionMode.value = localStorage.getItem('voxi-motion-mode') === 'calm' ? 'calm' : 'adaptive';
 motionMode.addEventListener('change', () => localStorage.setItem('voxi-motion-mode', motionMode.value));
-$<HTMLInputElement>('expanded-provider').checked = localStorage.getItem('voxi-expanded-provider') === 'true';
+$<HTMLInputElement>('expanded-provider').checked = localStorage.getItem('voxi-expanded-provider') !== 'false';
 let lyricStage: ReturnType<typeof import('./lyric-stage').createLyricStage> | undefined;
 let pageDisposed = false;
 void import('./lyric-stage').then(({ createLyricStage }) => {
@@ -77,6 +81,19 @@ let offset = 0;
 let lyricState = 'WAITING FOR MUSIC';
 let lyricCandidates: LyricRecord[] = [];
 let plainLyrics = '';
+const albumArt = createAlbumArt($('album-cover'),$('stage'),track=>native ? invoke<string|null>('media_artwork',track) : Promise.resolve(null),()=>userReducedMotion||systemMotion.matches);
+const ambience=$<HTMLInputElement>('album-ambience'),strength=$<HTMLInputElement>('ambience-strength');
+ambience.checked=localStorage.getItem('voxi-album-ambience')==='true';
+const savedStrength=Number(localStorage.getItem('voxi-ambience-strength')??35);
+strength.value=String(Number.isFinite(savedStrength)?Math.max(10,Math.min(60,savedStrength)):35);
+function configureAmbience(){
+  strength.disabled=!ambience.checked;
+  $('ambience-value').textContent=`${strength.value}%`;
+  albumArt.configure(ambience.checked,Number(strength.value)/100);
+}
+ambience.addEventListener('change',()=>{localStorage.setItem('voxi-album-ambience',String(ambience.checked));configureAmbience();});
+strength.addEventListener('change',()=>{localStorage.setItem('voxi-ambience-strength',strength.value);configureAmbience();});
+configureAmbience();
 
 function status(text: string) { $('status').textContent = text; }
 function clearLyrics() {
@@ -89,6 +106,8 @@ function clearLyrics() {
 function clock(seconds: number) { const s = Math.max(0, Math.floor(seconds)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 
 function showTrack() {
+  void albumArt.track(current);
+  $('stage').dataset.playing = String(current.playing);
   $('track-title').textContent = current.title || 'Untitled media';
   $('track-artist').textContent = current.artist || current.id;
   $('source-label').textContent = current.id ? playerLabel(current.id).toUpperCase() : 'AUTO DETECT';
@@ -326,7 +345,7 @@ syncMotion();
 const sceneSettings = new MutationObserver(syncMotion);
 sceneSettings.observe($('toggle'), { childList: true });
 $('accent').addEventListener('input', syncMotion);
-window.addEventListener('pagehide', () => { pageDisposed = true; lyricStage?.dispose(); sceneSettings.disconnect(); systemMotion.removeEventListener('change', syncMotion); }, { once: true });
+window.addEventListener('pagehide', () => { pageDisposed = true; albumArt.dispose(); lyricStage?.dispose(); sceneSettings.disconnect(); systemMotion.removeEventListener('change', syncMotion); }, { once: true });
 // Schedule after completion so slow native calls cannot accumulate.
 async function schedulePoll() { await poll(); setTimeout(schedulePoll, 500); }
 setTimeout(schedulePoll, 1000);

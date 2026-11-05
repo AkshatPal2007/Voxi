@@ -2,10 +2,10 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $stage = Join-Path $projectRoot ('release/source-clean-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage | Out-Null
-$files = @('README.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','index.html','.gitignore')
+$files = @('README.md','LICENSE','CONTRIBUTING.md','SECURITY.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','index.html','.gitignore')
 $files += Get-ChildItem -LiteralPath (Join-Path $projectRoot 'src') -File -Recurse | ForEach-Object { $_.FullName.Substring($projectRoot.Length+1) }
-$files += @('src-tauri/Cargo.toml','src-tauri/Cargo.lock','src-tauri/build.rs','src-tauri/tauri.conf.json','scripts/package-windows.ps1','docs/SETUP-WINDOWS.txt','docs/THIRD-PARTY-NOTICES.txt')
-foreach ($folder in @('src-tauri/src','src-tauri/icons','src-tauri/capabilities')) {
+$files += @('src-tauri/Cargo.toml','src-tauri/Cargo.lock','src-tauri/build.rs','src-tauri/tauri.conf.json','scripts/package-windows.ps1')
+foreach ($folder in @('src-tauri/src','src-tauri/icons','src-tauri/capabilities','docs','.github')) {
   $files += Get-ChildItem -LiteralPath (Join-Path $projectRoot $folder) -File -Recurse | ForEach-Object { $_.FullName.Substring($projectRoot.Length+1) }
 }
 foreach ($file in $files) {

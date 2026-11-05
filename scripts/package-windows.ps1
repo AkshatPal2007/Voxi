@@ -9,6 +9,7 @@ $shareFolder = Join-Path $projectRoot "release/$releaseName"
 New-Item -ItemType Directory -Path $shareFolder -Force | Out-Null
 Copy-Item -LiteralPath $installerPath -Destination (Join-Path $shareFolder $installerName) -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/SETUP-WINDOWS.txt') -Destination (Join-Path $shareFolder 'SETUP.txt') -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $shareFolder -Force
 if (Test-Path -LiteralPath (Join-Path $projectRoot 'docs/THIRD-PARTY-NOTICES.txt')) {
   Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/THIRD-PARTY-NOTICES.txt') -Destination $shareFolder -Force
 }

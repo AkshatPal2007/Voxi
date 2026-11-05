@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { activeLine, type Line } from './lyrics';
-import { wordPose, stageWords, playbackCursor, type StagedWord } from './word-motion';
+import { wordPose, stageWords, playbackCursor, wordEmphasis, type StagedWord } from './word-motion';
+import { frameDue, advanceFrameClock } from './frame-pacing';
 
 const symbols: Record<string, string> = { time: '◷', minute: '◷', wait: '⌛', love: '♥', heart: '♥', night: '☾', moon: '☾', sun: '☀', light: '✦', star: '★', stars: '✦', rain: '☂', fire: '♨', world: '◎', music: '♫', home: '⌂', eyes: '◉', fly: '➶', quiet: '◌', color: '✿', away: '➜', space: '✧' };
 
@@ -13,6 +14,7 @@ export function createLyricStage(host: HTMLElement) {
   const ctx = surface.getContext('2d')!;
   const texture = new THREE.CanvasTexture(surface);
   texture.minFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   const uniforms = { ink: { value: texture }, lens: { value: 0 }, ship: { value: 0 } };
   const material = new THREE.ShaderMaterial({ transparent: true, depthTest: false, uniforms,
     vertexShader: `varying vec2 texUv; uniform float ship;
@@ -66,25 +68,32 @@ export function createLyricStage(host: HTMLElement) {
       const target = activeLine(units, position);
       cursor = playbackCursor(units,target,position,reduced);
       const immersive = document.body.classList.contains('immersive');
-      const key = `${position.toFixed(3)}|${style}|${reduced}|${accent}|${seed}|${adaptive}|${immersive}`;
-      if (last >= 0 && (now - last < 1000 / 45 || key === signature)) return;
-      last = now; signature = key;
+      if (!frameDue(now,last)) return;
+      const phrase = units[Math.max(0,target)].phrase;
+      const phraseStart = lines[phrase].words?.[0]?.time ?? lines[phrase].time;
+      const mix = reduced ? 1 : Math.min(1, Math.max(0, (position - phraseStart) / .45));
+      const blend = mix * mix * (3 - 2 * mix);
+      let envelopes = '';
+      for (let i=Math.max(0,target-2);i<=Math.min(units.length-1,target+2);i++)
+        envelopes += wordEmphasis(units[i],position,reduced,units[i+1]?.time).toFixed(4);
+      const focus = units[target];
+      const activeFocus = !!focus && position >= focus.time && (focus.end === undefined || position < focus.end);
+      const orbit = focus?.featured && adaptive && !reduced && !immersive && activeFocus ? position.toFixed(3) : '';
+      // Playback time alone is not a visual change. Holds and pauses reuse GPU pixels.
+      const key = `${target}|${cursor.toFixed(4)}|${blend.toFixed(4)}|${envelopes}|${activeFocus}|${orbit}|${style}|${reduced}|${accent}|${seed}|${adaptive}|${immersive}`;
+      if (last >= 0 && key === signature) return;
+      last = advanceFrameClock(now,last); signature = key;
       uniforms.lens.value = style === 'lens' || style === 'lens-visual' ? 1 : 0;
       uniforms.ship.value = style === 'ship' ? 1 : 0;
       const height = surface.height;
       ctx.clearRect(0, 0, 1200, height);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const phrase = units[Math.max(0,target)].phrase;
-      const phraseStart = lines[phrase].words?.[0]?.time ?? lines[phrase].time;
-      const mix = Math.min(1, Math.max(0, (position - phraseStart) / .45));
-      const blend = mix * mix * (3 - 2 * mix);
       for (let i = Math.max(0, target - 2); i <= Math.min(units.length - 1, target + 2); i++) {
         const word = units[i], distance = i - cursor;
         const y = height * .52 + distance * height * .23;
         const isWord = word.text.trim().split(/\s+/).length <= 3;
         const active = i === target && position >= word.time && (word.end === undefined || position < word.end);
-        const onset = Math.max(0, Math.min(1, (position - word.time) / .09));
-        const emphasis = active ? reduced ? 1.25 : 1 + .30 * (1 - Math.pow(1 - onset, 3)) : 1;
+        const emphasis = wordEmphasis(word,position,reduced,units[i+1]?.time);
         const size = (isWord ? height * .17 : height * .115) * emphasis;
         ctx.font = `italic 750 ${size}px "Segoe UI Variable", "Segoe UI", sans-serif`;
         const text = word.text.trim();

@@ -2,6 +2,7 @@
 node_modules/
 dist/
 release/
+launch-video/
 
 # Tauri and Rust build output
 src-tauri/target/
@@ -14,6 +15,11 @@ research/
 # Environment and local machine files
 .env
 .env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
 *.local
 *.log
 .DS_Store

@@ -65,6 +65,39 @@ async fn media_sessions() -> Result<Vec<MediaSession>, String> {
 }
 
 #[tauri::command]
+async fn media_artwork(id: String, title: String, artist: String, album: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(windows)]
+        {
+            use windows::{Storage::Streams::DataReader, Security::Cryptography::CryptographicBuffer};
+            for session in manager()?.GetSessions().map_err(|e| e.to_string())? {
+                if session.SourceAppUserModelId().map_err(|e| e.to_string())?.to_string() != id { continue; }
+                let read = || -> windows::core::Result<Option<String>> {
+                    let info = session.TryGetMediaPropertiesAsync()?.get()?;
+                    if info.Title()?.to_string() != title || info.Artist()?.to_string() != artist || info.AlbumTitle()?.to_string() != album { return Ok(None); }
+                    let stream = info.Thumbnail()?.OpenReadAsync()?.get()?;
+                    let size = stream.Size()?;
+                    if size == 0 || size > 2_000_000 { return Ok(None); }
+                    let mime = stream.ContentType()?.to_string();
+                    let mime = if mime.is_empty() { "image/jpeg" } else { &mime };
+                    if !["image/jpeg", "image/png", "image/webp", "image/gif"].contains(&mime) { return Ok(None); }
+                    let reader = DataReader::CreateDataReader(&stream.GetInputStreamAt(0)?)?;
+                    let loaded = reader.LoadAsync(size as u32)?.get()?;
+                    if loaded != size as u32 { return Ok(None); }
+                    let encoded = CryptographicBuffer::EncodeToBase64String(&reader.ReadBuffer(loaded)?)?;
+                    Ok(Some(format!("data:{};base64,{}", mime, encoded)))
+                };
+                // Missing artwork must never disrupt playback or lyric lookup.
+                return Ok(read().unwrap_or(None));
+            }
+            Ok(None)
+        }
+        #[cfg(not(windows))]
+        { let _ = (id,title,artist,album); Ok(None) }
+    }).await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 fn media_control(id: String, action: String) -> Result<bool, String> {
     #[cfg(windows)]
     {
@@ -100,7 +133,7 @@ fn main() {
         return;
     }
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![media_sessions, media_control])
+        .invoke_handler(tauri::generate_handler![media_sessions, media_artwork, media_control])
         .run(tauri::generate_context!())
         .expect("Could not start Voxi");
 }

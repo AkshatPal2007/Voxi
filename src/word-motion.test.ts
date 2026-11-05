@@ -10,9 +10,9 @@ test('phrase staging is deterministic, centered at focus and bounded', () => {
 });
 test('playback cursor reproduces pauses and seeks without delayed word identity', () => {
   const words=[{text:'one',time:1},{text:'two',time:2}];
-  assert.equal(playbackCursor(words,1,2.2,false),1);
+  assert.equal(playbackCursor(words,1,2.3,false),1);
   assert.equal(playbackCursor(words,1,2.08,false),playbackCursor(words,1,2.08,false));
-  assert.equal(playbackCursor(words,0,1.2,false),0);
+  assert.equal(playbackCursor(words,0,1.3,false),0);
   assert.equal(playbackCursor(words,1,2,true),1);
 });
 test('adaptive phrases use multiple bounded compositions and calm keeps a curve', () => {

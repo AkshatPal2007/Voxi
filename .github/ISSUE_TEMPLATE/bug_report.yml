@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a playback, lyrics, animation or installation problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Please omit tokens, cookies, private windows and personal logs. Security issues belong in the private reporting process in SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Voxi version and Windows version
+      placeholder: "Voxi 0.1.4, Windows 11 x64"
+    validations:
+      required: true
+  - type: input
+    id: player
+    attributes:
+      label: Music player and visualization mode
+      placeholder: "Spotify desktop, Fisheye Visual"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Optional screenshot or redacted diagnostics
